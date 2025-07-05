@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Pages/Css/Intro.css";
-import logo from "../Pages/Logo/TNT-logo.png";
+import logo from "../Pages/Logo/logo.jpg";
 
 function IntroPage() {
   const [showIntro, setShowIntro] = useState(true);

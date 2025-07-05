@@ -1,84 +1,103 @@
-import React, { useState } from "react";
+import React, { useState ,useRef  } from "react";
 import * as XLSX from "xlsx";
 
 function DutySlipAnalyzer() {
-  const allSlips = [
-    {
-      slipNo: "DS001",
-      company: "TNT Inc",
-      bookedBy: "Raj",
-      passenger: "Amit",
-      pickup: "Mumbai",
-      type: "SUV",
-      regNo: "MH12AB1234",
-      tripType: "Outstation",
-      driver: "Karan",
-      startKm: 12000,
-      closeKm: 12310,
-      totalKm: 310,
-      extraKm: 10,
-      startTime: "08:00 AM",
-      closeTime: "08:00 PM",
-      totalHours: 12,
-      extraHours: 2,
-      startDate: "2025-07-01",
-      closeDate: "2025-07-01",
-      totalDays: 1,
-      tollParking: 200,
-    },
-    {
-      slipNo: "DS002",
-      company: "TNT Inc",
-      bookedBy: "Sneha",
-      passenger: "Rahul",
-      pickup: "Pune",
-      type: "Sedan",
-      regNo: "MH14XY9876",
-      tripType: "Local",
-      driver: "Arjun",
-      startKm: 5000,
-      closeKm: 5150,
-      totalKm: 150,
-      extraKm: 0,
-      startTime: "09:00 AM",
-      closeTime: "01:00 PM",
-      totalHours: 4,
-      extraHours: 0,
-      startDate: "2025-07-02",
-      closeDate: "2025-07-02",
-      totalDays: 1,
-      tollParking: 50,
-    },
-    {
-      slipNo: "DS003",
-      company: "TNT Inc",
-      bookedBy: "Ankit",
-      passenger: "Priya",
-      pickup: "Nashik",
-      type: "MPV",
-      regNo: "MH13LM3344",
-      tripType: "Outstation",
-      driver: "Ravi",
-      startKm: 3000,
-      closeKm: 3350,
-      totalKm: 350,
-      extraKm: 20,
-      startTime: "07:30 AM",
-      closeTime: "09:00 PM",
-      totalHours: 13.5,
-      extraHours: 3.5,
-      startDate: "2025-07-03",
-      closeDate: "2025-07-03",
-      totalDays: 1,
-      tollParking: 150,
-    }
-  ];
-
+  const [slips, setSlips] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 2;
+  const [loading, setLoading] = useState(false);
 
-  const filteredSlips = allSlips.filter(
+  const endpoint = "https://dutyslipextraction.cognitiveservices.azure.com/";
+  const apiKey = "CGnyHUbguN1Qy3jOZD2yTnrnNy1A2x0LJBYdWXVRDNUd7N8txrRwJQQJ99BGACYeBjFXJ3w3AAALACOGF8ww";
+  const modelId = "TNTmodel"; // Replace with your trained model ID
+
+
+  const fileInputRef = useRef();
+const handleFileUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setLoading(true);
+
+  try {
+    const contentType = file.type || "application/octet-stream"; // Fallback
+    console.log("Uploading file:", file.name, contentType, file.size);
+
+    const analyzeUrl = `${endpoint}formrecognizer/documentModels/${modelId}:analyze?api-version=2023-07-31`;
+
+    const uploadResponse = await fetch(analyzeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": contentType,
+        "Ocp-Apim-Subscription-Key": apiKey,
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error("Azure Upload Error:", errorText);
+      throw new Error(`Upload failed: ${uploadResponse.status}`);
+    }
+
+    const operationLocation = uploadResponse.headers.get("operation-location");
+
+    if (!operationLocation) {
+      throw new Error("No operation-location header returned from Azure.");
+    }
+
+    let result;
+    while (true) {
+      const poll = await fetch(operationLocation, {
+        headers: { "Ocp-Apim-Subscription-Key": apiKey },
+      });
+      result = await poll.json();
+
+      if (result.status === "succeeded") break;
+      if (result.status === "failed") {
+        console.error("Azure processing failed:", result);
+        throw new Error("Azure failed to analyze document.");
+      }
+
+      await new Promise((res) => setTimeout(res, 2000)); // wait 2s
+    }
+
+    const fields = result?.analyzeResult?.documents?.[0]?.fields || {};
+    const parsed = {
+      slipNo: fields.slipNo?.content || "DS" + (slips.length + 1).toString().padStart(3, "0"),
+      company: fields.company?.content || "",
+      bookedBy: fields.bookedBy?.content || "",
+      passenger: fields.passenger?.content || "",
+      pickup: fields.pickup?.content || "",
+      type: fields.type?.content || "",
+      regNo: fields.regNo?.content || "",
+      tripType: fields.tripType?.content || "",
+      driver: fields.driver?.content || "",
+      startKm: fields.startKm?.content || "",
+      closeKm: fields.closeKm?.content || "",
+      totalKm: fields.totalKm?.content || "",
+      extraKm: fields.extraKm?.content || "",
+      startTime: fields.startTime?.content || "",
+      closeTime: fields.closeTime?.content || "",
+      totalHours: fields.totalHours?.content || "",
+      extraHours: fields.extraHours?.content || "",
+      startDate: fields.startDate?.content || "",
+      closeDate: fields.closeDate?.content || "",
+      totalDays: fields.totalDays?.content || "",
+      tollParking: fields.tollParking?.content || "",
+    };
+
+    setSlips((prev) => [...prev, parsed]);
+  } catch (err) {
+    alert("❌ Failed to analyze document. Check console for details.");
+    console.error("Document Analysis Error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const filteredSlips = slips.filter(
     (slip) =>
       slip.slipNo.toLowerCase().includes(search.toLowerCase()) ||
       slip.company.toLowerCase().includes(search.toLowerCase()) ||
@@ -123,18 +142,28 @@ function DutySlipAnalyzer() {
           gap: "10px",
         }}
       >
-        <button
-          style={{
-            padding: "8px 15px",
-            backgroundColor: "#6c757d",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          📄 Upload Document
-        </button>
+    <button
+  onClick={() => fileInputRef.current.click()}
+  style={{
+    padding: "8px 15px",
+    backgroundColor: "#6c757d",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  }}
+>
+  📄 Upload Document
+</button>
+
+<input
+  type="file"
+  accept=".pdf,.jpg,.png"
+  ref={fileInputRef}
+  onChange={handleFileUpload}
+  style={{ display: "none" }}
+/>
+
 
         <input
           type="text"
@@ -167,6 +196,8 @@ function DutySlipAnalyzer() {
         </button>
       </div>
 
+      {loading && <p style={{ color: "orange" }}>Analyzing document, please wait...</p>}
+
       <div style={{ overflowX: "auto" }}>
         <table
           style={{
@@ -184,9 +215,7 @@ function DutySlipAnalyzer() {
                 "Close KM", "Total KM", "Extra KM", "Start Time", "Close Time", "Total Hours",
                 "Extra Hours", "Start Date", "Close Date", "Total Days", "Toll/Parking (₹)"
               ].map((heading, i) => (
-                <th key={i} style={thStyle}>
-                  {heading}
-                </th>
+                <th key={i} style={thStyle}>{heading}</th>
               ))}
             </tr>
           </thead>
