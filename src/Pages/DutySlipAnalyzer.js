@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import * as XLSX from "xlsx";
+import "./DutySlipAnalyzer.css";
 
 function DutySlipAnalyzer() {
   const [slips, setSlips] = useState([]);
@@ -7,85 +8,103 @@ function DutySlipAnalyzer() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [editingCell, setEditingCell] = useState({ rowIndex: null, key: null });
+  const [editIndex, setEditIndex] = useState(null);
 
-  const perPage = 2;
+  const perPage = 5;
   const fileInputRef = useRef();
 
   const endpoint = "https://dutyslipextraction.cognitiveservices.azure.com/";
   const apiKey = "CGnyHUbguN1Qy3jOZD2yTnrnNy1A2x0LJBYdWXVRDNUd7N8txrRwJQQJ99BGACYeBjFXJ3w3AAALACOGF8ww";
   const modelId = "TNTmodelNew";
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleFileUpload = async (e, reuploadIndex = null) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
     setLoading(true);
-    try {
-      const contentType = file.type || "application/octet-stream";
-      const analyzeUrl = `${endpoint}formrecognizer/documentModels/${modelId}:analyze?api-version=2023-07-31`;
+    const newSlips = [...slips];
 
-      const uploadResponse = await fetch(analyzeUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": contentType,
-          "Ocp-Apim-Subscription-Key": apiKey,
-        },
-        body: file,
-      });
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      try {
+        const contentType = file.type || "application/octet-stream";
+        const analyzeUrl = `${endpoint}formrecognizer/documentModels/${modelId}:analyze?api-version=2023-07-31`;
 
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error("Azure Upload Error:", errorText);
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
-      }
-
-      const operationLocation = uploadResponse.headers.get("operation-location");
-      if (!operationLocation) throw new Error("No operation-location header returned.");
-
-      let result;
-      while (true) {
-        const poll = await fetch(operationLocation, {
-          headers: { "Ocp-Apim-Subscription-Key": apiKey },
+        const uploadResponse = await fetch(analyzeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": contentType,
+            "Ocp-Apim-Subscription-Key": apiKey,
+          },
+          body: file,
         });
-        result = await poll.json();
-        if (result.status === "succeeded") break;
-        if (result.status === "failed") throw new Error("Azure failed to analyze document.");
-        await new Promise((res) => setTimeout(res, 2000));
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error("Azure Upload Error:", errorText);
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
+        }
+
+        const operationLocation = uploadResponse.headers.get("operation-location");
+        if (!operationLocation) throw new Error("No operation-location header returned.");
+
+        let result;
+        while (true) {
+          const poll = await fetch(operationLocation, {
+            headers: { "Ocp-Apim-Subscription-Key": apiKey },
+          });
+          result = await poll.json();
+          if (result.status === "succeeded") break;
+          if (result.status === "failed") throw new Error("Azure failed to analyze document.");
+          await new Promise((res) => setTimeout(res, 2000));
+        }
+
+        const fields = result?.analyzeResult?.documents?.[0]?.fields || {};
+
+        const parsed = {
+          slipNo: fields["Duty slip No"]?.content || "",
+          company: fields["Company"]?.content || "",
+          bookedBy: fields["Booked by"]?.content || "",
+          passenger: fields["Passenger Name"]?.content || "",
+          pickup: fields["pickup address"]?.content || "",
+          type: fields["Type of veh"]?.content || "",
+          regNo: fields["veh Regn no"]?.content || "",
+          tripType: fields["trip"]?.content || "",
+          driver: fields["Driver name"]?.content || "",
+          startKm: fields["starting km"]?.content || "",
+          closeKm: fields["closing km"]?.content || "",
+          totalKm: fields["total km"]?.content || "",
+          extraKm: fields["extra km"]?.content || "",
+          startTime: fields["starting time"]?.content || "",
+          closeTime: fields["closing time"]?.content || "",
+          totalHours: fields["total time"]?.content || "",
+          extraHours: fields["extra time"]?.content || "",
+          startDate: fields["starting date"]?.content || "",
+          closeDate: fields["closing date"]?.content || "",
+          totalDays: fields["total days"]?.content || "",
+          tollParking: fields["toll/parking extra"]?.content || "",
+        };
+
+        if (reuploadIndex !== null && files.length === 1) {
+          newSlips[reuploadIndex] = parsed;
+        } else {
+          newSlips.push(parsed);
+        }
+      } catch (err) {
+        console.error("❌ Error analyzing document:", err);
+        alert(`Error analyzing file ${file.name}`);
       }
-
-      const fields = result?.analyzeResult?.documents?.[0]?.fields || {};
-
-      const parsed = {
-        slipNo: fields["Duty slip No"]?.content || "",
-        company: fields["Company"]?.content || "",
-        bookedBy: fields["Booked by"]?.content || "",
-        passenger: fields["Passenger Name"]?.content || "",
-        pickup: fields["pickup address"]?.content || "",
-        type: fields["Type of veh"]?.content || "",
-        regNo: fields["veh Regn no"]?.content || "",
-        tripType: fields["trip"]?.content || "",
-        driver: fields["Driver name"]?.content || "",
-        startKm: fields["starting km"]?.content || "",
-        closeKm: fields["closing km"]?.content || "",
-        totalKm: fields["total km"]?.content || "",
-        extraKm: fields["extra km"]?.content || "",
-        startTime: fields["starting time"]?.content || "",
-        closeTime: fields["closing time"]?.content || "",
-        totalHours: fields["total time"]?.content || "",
-        extraHours: fields["extra time"]?.content || "",
-        startDate: fields["starting date"]?.content || "",
-        closeDate: fields["closing date"]?.content || "",
-        totalDays: fields["total days"]?.content || "",
-        tollParking: fields["toll/parking extra"]?.content || "",
-      };
-
-      setSlips((prev) => [...prev, parsed]);
-    } catch (err) {
-      alert("❌ Failed to analyze document. Check console for details.");
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
+
+    setSlips(newSlips);
+    setEditIndex(null);
+    setLoading(false);
+  };
+
+  const handleDelete = (index) => {
+    const globalIndex = (page - 1) * perPage + index;
+    const updated = slips.filter((_, i) => i !== globalIndex);
+    setSlips(updated);
   };
 
   const filteredSlips = slips.filter(
@@ -106,25 +125,11 @@ function DutySlipAnalyzer() {
     XLSX.writeFile(workbook, "DutySlips.xlsx");
   };
 
-  const thStyle = {
-    padding: "10px",
-    border: "1px solid #ccc",
-    backgroundColor: "#007bff",
-    color: "white",
-    textAlign: "left",
-  };
-
-  const tdStyle = {
-    padding: "10px",
-    border: "1px solid #ccc",
-    cursor: "pointer",
-  };
-
   const renderEditableCell = (i, key) => {
     const globalIndex = (page - 1) * perPage + i;
     return (
       <td
-        style={tdStyle}
+        className="editable-cell"
         onClick={() => setEditingCell({ rowIndex: i, key })}
       >
         {editingCell.rowIndex === i && editingCell.key === key ? (
@@ -143,7 +148,7 @@ function DutySlipAnalyzer() {
                 setEditingCell({ rowIndex: null, key: null });
               }
             }}
-            style={{ width: "100%", padding: "5px" }}
+            className="cell-input"
           />
         ) : (
           slips[globalIndex][key] || "-"
@@ -153,18 +158,15 @@ function DutySlipAnalyzer() {
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Segoe UI" }}>
-      <h2 style={{ color: "#007bff" }}>📝 Duty Slip Analyzer</h2>
+    <div className="container">
+      <h2 className="title">📝 Duty Slip Analyzer</h2>
 
-      <div style={{
-        display: "flex", justifyContent: "space-between", marginBottom: "10px",
-        alignItems: "center", flexWrap: "wrap", gap: "10px"
-      }}>
+      <div className="top-bar">
         <button
-          onClick={() => fileInputRef.current.click()}
-          style={{
-            padding: "8px 15px", backgroundColor: "#6c757d", color: "#fff",
-            border: "none", borderRadius: "5px", cursor: "pointer"
+          className="upload-btn"
+          onClick={() => {
+            setEditIndex(null);
+            fileInputRef.current.click();
           }}
         >
           📄 Upload Document
@@ -174,67 +176,59 @@ function DutySlipAnalyzer() {
           type="file"
           accept=".pdf,.jpg,.png"
           ref={fileInputRef}
-          onChange={handleFileUpload}
+          onChange={(e) => handleFileUpload(e, editIndex)}
+          multiple
           style={{ display: "none" }}
         />
 
         <input
           type="text"
+          className="search-box"
           placeholder="Search by slip no, company, passenger"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
-          style={{
-            padding: "8px", width: "300px",
-            borderRadius: "5px", border: "1px solid #ccc"
-          }}
         />
 
-        <button
-          onClick={exportToExcel}
-          style={{
-            padding: "8px 15px", backgroundColor: "#28a745", color: "#fff",
-            border: "none", borderRadius: "5px", cursor: "pointer"
-          }}
-        >
+        <button className="export-btn" onClick={exportToExcel}>
           Export to Excel
         </button>
       </div>
 
-      {loading && <p style={{ color: "orange" }}>Analyzing document, please wait...</p>}
+  
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{
-          borderCollapse: "collapse",
-          minWidth: "1300px", width: "100%",
-          border: "1px solid #ccc"
-        }}>
+      {loading && (
+  <div className="overlay">
+    <div className="overlay-message">Analyzing document, please wait...</div>
+  </div>
+)}
+
+
+      <div className="table-container">
+        <table className="data-table">
           <thead>
             <tr>
-              {[
-                "SR No", "Duty Slip No", "Company", "Booked By", "Passenger Name",
+              {["SR No", "Duty Slip No", "Company", "Booked By", "Passenger Name",
                 "Pickup Address", "Type of Vehicle", "Vehicle Reg. No", "Trip Type",
                 "Driver Name", "Start KM", "Close KM", "Total KM", "Extra KM",
                 "Start Time", "Close Time", "Total Hours", "Extra Hours",
-                "Start Date", "Close Date", "Total Days", "Toll/Parking (₹)"
+                "Start Date", "Close Date", "Total Days", "Toll/Parking (₹)", "Actions"
               ].map((heading, i) => (
-                <th key={i} style={thStyle}>{heading}</th>
+                <th key={i} className="table-header">{heading}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paginatedSlips.length === 0 ? (
               <tr>
-                <td colSpan="22" style={{ textAlign: "center", padding: "15px", color: "#888" }}>
-                  No details found.
-                </td>
+                <td colSpan="23" className="no-data">No details found.</td>
               </tr>
             ) : (
               paginatedSlips.map((slip, i) => (
-                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f9f9f9" : "#ffffff" }}>
-                  <td style={tdStyle}>{(page - 1) * perPage + i + 1}</td>
+                <tr key={i} className={i % 2 === 0 ? "even-row" : "odd-row"}>
+                  <td className="editable-cell">{(page - 1) * perPage + i + 1}</td>
                   {renderEditableCell(i, "slipNo")}
                   {renderEditableCell(i, "company")}
                   {renderEditableCell(i, "bookedBy")}
@@ -256,6 +250,18 @@ function DutySlipAnalyzer() {
                   {renderEditableCell(i, "closeDate")}
                   {renderEditableCell(i, "totalDays")}
                   {renderEditableCell(i, "tollParking")}
+                  <td className="editable-cell action-cell">
+                    <button className="delete-btn" onClick={() => handleDelete(i)}>Delete</button>
+                    <button
+                      className="reupload-btn"
+                      onClick={() => {
+                        setEditIndex((page - 1) * perPage + i);
+                        fileInputRef.current.click();
+                      }}
+                    >
+                      Re-upload
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -263,20 +269,12 @@ function DutySlipAnalyzer() {
         </table>
       </div>
 
-      <div style={{ marginTop: 15, textAlign: "center" }}>
+      <div className="pagination">
         {Array.from({ length: totalPages }, (_, i) => (
           <button
             key={i}
+            className={`page-btn ${page === i + 1 ? "active" : ""}`}
             onClick={() => setPage(i + 1)}
-            style={{
-              margin: "0 5px",
-              padding: "6px 12px",
-              background: page === i + 1 ? "#007bff" : "#f0f0f0",
-              color: page === i + 1 ? "#fff" : "#000",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
           >
             {i + 1}
           </button>
