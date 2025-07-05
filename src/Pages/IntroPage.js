@@ -12,7 +12,7 @@ function IntroPage() {
     const timer1 = setTimeout(() => setFadeOut(true), 4500);
     const timer2 = setTimeout(() => {
       setShowIntro(false);
-      navigate("/dashboard/analyze"); // <-- this triggers the redirect
+      navigate("/dashboard/driver"); 
     }, 5000);
 
     return () => {

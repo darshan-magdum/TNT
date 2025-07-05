@@ -2,11 +2,11 @@ import React, { useState } from "react";
 
 function CarDetails() {
   const allCars = [
-    { Name: "Toyota Crysta", Type: "SUV", Number: "MH12AB1234", Color: "White", Rate: "₹17/km" },
-    { Name: "Hyundai Verna", Type: "Sedan", Number: "DL01CD5678", Color: "Silver", Rate: "₹15/km" },
-    { Name: "Maruti Ertiga", Type: "MPV", Number: "KA05XY1111", Color: "Blue", Rate: "₹16/km" },
-    { Name: "Honda City", Type: "Sedan", Number: "MH14DE4321", Color: "Black", Rate: "₹14/km" },
-    { Name: "Innova HyCross", Type: "SUV", Number: "GJ01RT8765", Color: "Red", Rate: "₹18/km" },
+    { Name: "Toyota Crysta", Type: "SUV", Number: "MH12AB1234", Rate: "₹17/km" },
+    { Name: "Hyundai Verna", Type: "Sedan", Number: "DL01CD5678" , Rate: "₹15/km" },
+    { Name: "Maruti Ertiga", Type: "MPV", Number: "KA05XY1111" , Rate: "₹16/km" },
+    { Name: "Honda City", Type: "Sedan", Number: "MH14DE4321", Rate: "₹14/km" },
+    { Name: "Innova HyCross", Type: "SUV", Number: "GJ01RT8765" , Rate: "₹18/km" },
   ];
 
   const [search, setSearch] = useState("");
@@ -58,7 +58,6 @@ function CarDetails() {
               <th style={thStyle}>Name</th>
               <th style={thStyle}>Type</th>
               <th style={thStyle}>Number</th>
-              <th style={thStyle}>Color</th>
               <th style={thStyle}>Rate</th>
             </tr>
           </thead>
@@ -76,7 +75,6 @@ function CarDetails() {
                   <td style={tdStyle}>{car.Name}</td>
                   <td style={tdStyle}>{car.Type}</td>
                   <td style={tdStyle}>{car.Number}</td>
-                  <td style={tdStyle}>{car.Color}</td>
                   <td style={tdStyle}>{car.Rate}</td>
                 </tr>
               ))
