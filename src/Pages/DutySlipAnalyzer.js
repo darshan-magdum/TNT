@@ -129,12 +129,42 @@ function DutySlipAnalyzer() {
   const paginatedSlips = filteredSlips.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(filteredSlips.length / perPage);
 
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredSlips);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "DutySlips");
-    XLSX.writeFile(workbook, "DutySlips.xlsx");
-  };
+const exportToExcel = () => {
+  const worksheet = XLSX.utils.json_to_sheet(filteredSlips);
+
+  // 🔷 Auto-width: calculate column widths based on data
+  const cols = Object.keys(filteredSlips[0] || {}).map((key) => {
+    const maxLength = Math.max(
+      key.length,
+      ...filteredSlips.map((row) => (row[key] ? row[key].toString().length : 0))
+    );
+    return { wch: maxLength + 5 }; // Add padding
+  });
+  worksheet["!cols"] = cols;
+
+  // 🔳 Add simple borders to all cells
+  const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[cell_address]) continue;
+      if (!worksheet[cell_address].s) worksheet[cell_address].s = {};
+      worksheet[cell_address].s.border = {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      };
+    }
+  }
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "DutySlips");
+
+  // 🟨 Add styles support
+  XLSX.writeFile(workbook, "DutySlips.xlsx", { cellStyles: true });
+};
+
 
   const renderEditableCell = (i, key) => {
     const globalIndex = (page - 1) * perPage + i;
@@ -220,16 +250,6 @@ function DutySlipAnalyzer() {
       <div className="table-container">
         <table className="data-table">
           <thead>
-            {/* <tr>
-              {["SR No", "Duty Slip No", "Company", "Booked By", "Passenger Name",
-                "Pickup Address", "Type of Vehicle", "Vehicle Reg. No", "Trip Type",
-                "Driver Name", "Start KM", "Close KM", "Total KM", "Extra KM",
-                "Start Time", "Close Time", "Total Hours", "Extra Hours",
-                "Start Date", "Close Date", "Total Days", "Toll/Parking (₹)", "Actions"
-              ].map((heading, i) => (
-                <th key={i} className="table-header">{heading}</th>
-              ))}
-            </tr> */}
 <tr>
               {["SR No", "Date", "Veh Type", "Veh No", "Trip",
                 "Guest name", "pick Address","Driver Name", "Booked By","BKG No", "CT No",
