@@ -62,27 +62,38 @@ function DutySlipAnalyzer() {
         const fields = result?.analyzeResult?.documents?.[0]?.fields || {};
 
         const parsed = {
-          slipNo: fields["Duty slip No"]?.content || "",
-          company: fields["Company"]?.content || "",
-          bookedBy: fields["Booked by"]?.content || "",
-          passenger: fields["Passenger Name"]?.content || "",
-          pickup: fields["pickup address"]?.content || "",
+          startDate: fields["starting date"]?.content || "",
           type: fields["Type of veh"]?.content || "",
           regNo: fields["veh Regn no"]?.content || "",
           tripType: fields["trip"]?.content || "",
-          driver: fields["Driver name"]?.content || "",
+          bookedBy: fields["Booked by"]?.content || "",
+          passenger: fields["Passenger Name"]?.content || "",
+          pickup: fields["pickup address"]?.content || "",
+           driver: fields["Driver name"]?.content || "",
+          slipNo: fields["Duty slip No"]?.content || "",
+          company: fields["Company"]?.content || "",
+          closeDate: fields["closing date"]?.content || "",
+          startTime: fields["starting time"]?.content || "",
+          closeTime: fields["closing time"]?.content || "",
+          totalHours: fields["total time"]?.content || "",
+           totalDays: fields["total days"]?.content || "",
+          Night: fields["Night"]?.content || "",
+          extraHours: fields["extra time"]?.content || "",
           startKm: fields["starting km"]?.content || "",
           closeKm: fields["closing km"]?.content || "",
           totalKm: fields["total km"]?.content || "",
           extraKm: fields["extra km"]?.content || "",
-          startTime: fields["starting time"]?.content || "",
-          closeTime: fields["closing time"]?.content || "",
-          totalHours: fields["total time"]?.content || "",
-          extraHours: fields["extra time"]?.content || "",
-          startDate: fields["starting date"]?.content || "",
-          closeDate: fields["closing date"]?.content || "",
-          totalDays: fields["total days"]?.content || "",
+          Package: fields["Package"]?.content || "",
+          DvrAllce: fields["Dvr Allce"]?.content || "",
+          NightAllc:fields["Night Allc"]?.content || "",
+          exhours: fields["exhours"]?.content || "",
+          exkm: fields["exkm"]?.content || "",
           tollParking: fields["toll/parking extra"]?.content || "",
+          Total:fields["Total"]?.content || "",
+
+
+
+          
         };
 
         if (reuploadIndex !== null && files.length === 1) {
@@ -209,7 +220,7 @@ function DutySlipAnalyzer() {
       <div className="table-container">
         <table className="data-table">
           <thead>
-            <tr>
+            {/* <tr>
               {["SR No", "Duty Slip No", "Company", "Booked By", "Passenger Name",
                 "Pickup Address", "Type of Vehicle", "Vehicle Reg. No", "Trip Type",
                 "Driver Name", "Start KM", "Close KM", "Total KM", "Extra KM",
@@ -218,7 +229,21 @@ function DutySlipAnalyzer() {
               ].map((heading, i) => (
                 <th key={i} className="table-header">{heading}</th>
               ))}
+            </tr> */}
+<tr>
+              {["SR No", "Date", "Veh Type", "Veh No", "Trip",
+                "Guest name", "pick Address","Driver Name", "Booked By","BKG No", "CT No",
+                "closing Date",
+                "Start Time", "Close Time", "Total Hours","Total Days","Night", "Extra Hours",
+                 "Start KM", "Close KM", "Total KM", "Extra KM",
+                 "Package","Dvr Allce","Night Allc",
+                 "Extra Hours","Extra Km",
+                "Toll/Parking (₹)", "Actions"
+              ].map((heading, i) => (
+                <th key={i} className="table-header">{heading}</th>
+              ))}
             </tr>
+            
           </thead>
           <tbody>
             {paginatedSlips.length === 0 ? (
@@ -229,28 +254,34 @@ function DutySlipAnalyzer() {
               paginatedSlips.map((slip, i) => (
                 <tr key={i} className={i % 2 === 0 ? "even-row" : "odd-row"}>
                   <td className="editable-cell">{(page - 1) * perPage + i + 1}</td>
+                   {renderEditableCell(i, "startDate")}
+                   {renderEditableCell(i, "type")}
+                    {renderEditableCell(i, "regNo")}
+                    {renderEditableCell(i, "tripType")}
+                    {renderEditableCell(i, "passenger")}
+                  {renderEditableCell(i, "pickup")}
+                  {renderEditableCell(i, "driver")}
+                    {renderEditableCell(i, "bookedBy")}
                   {renderEditableCell(i, "slipNo")}
                   {renderEditableCell(i, "company")}
-                  {renderEditableCell(i, "bookedBy")}
-                  {renderEditableCell(i, "passenger")}
-                  {renderEditableCell(i, "pickup")}
-                  {renderEditableCell(i, "type")}
-                  {renderEditableCell(i, "regNo")}
-                  {renderEditableCell(i, "tripType")}
-                  {renderEditableCell(i, "driver")}
-                  {renderEditableCell(i, "startKm")}
+                    {renderEditableCell(i, "closeDate")}
+                   {renderEditableCell(i, "startTime")}
+                  {renderEditableCell(i, "closeTime")}
+                  {renderEditableCell(i, "totalHours")}
+                   {renderEditableCell(i, "totalDays")}
+                  {renderEditableCell(i, "Night")}
+                   {renderEditableCell(i, "extraHours")}
+                    {renderEditableCell(i, "startKm")}
                   {renderEditableCell(i, "closeKm")}
                   {renderEditableCell(i, "totalKm")}
                   {renderEditableCell(i, "extraKm")}
-                  {renderEditableCell(i, "startTime")}
-                  {renderEditableCell(i, "closeTime")}
-                  {renderEditableCell(i, "totalHours")}
-                  {renderEditableCell(i, "extraHours")}
-                  {renderEditableCell(i, "startDate")}
-                  {renderEditableCell(i, "closeDate")}
-                  {renderEditableCell(i, "totalDays")}
-                  {renderEditableCell(i, "tollParking")}
-                  <td className="editable-cell action-cell">
+                  {renderEditableCell(i, "Package")}
+                  {renderEditableCell(i, "DvrAllce")}
+                  {renderEditableCell(i, "NightAllc")}
+                  {renderEditableCell(i, "exhours")}
+                  {renderEditableCell(i, "exkm")}
+                   {renderEditableCell(i, "tollParking")}
+                    <td className="editable-cell action-cell">
                     <button className="delete-btn" onClick={() => handleDelete(i)}>Delete</button>
                     <button
                       className="reupload-btn"
@@ -262,6 +293,21 @@ function DutySlipAnalyzer() {
                       Re-upload
                     </button>
                   </td>
+                  
+            
+                  
+
+                   
+                  
+                  
+
+                
+                
+                  
+                
+                 
+                 
+                
                 </tr>
               ))
             )}
